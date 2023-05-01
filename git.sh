@@ -89,8 +89,9 @@ case $1 in
     ;;
 
   # 🚧: construction
-  construction)
+  construction|wip)
     message="Work in progress"
+    emoji="🚧"
     ;;
 
   # 💚: green-heart

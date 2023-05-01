@@ -1,0 +1,7 @@
+documentation
+architecture
+Loco Switch have to publish it's configuration to a registry
+Move it to GitHub
+the scheduler starts the launcher
+find the best way to clean functions.json => only if no answer
+

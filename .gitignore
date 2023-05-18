@@ -2,4 +2,5 @@ tmp
 loco-switch
 infos.md
 functions.json
-
+.DS_Store
+ngrok.url

@@ -1,9 +1,16 @@
+// Main package
 package main
 
 import (
+	"context"
+	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"golang.ngrok.com/ngrok"
+	"golang.ngrok.com/ngrok/config"
 
 	"loco-switch/data"
 	"loco-switch/handlers"
@@ -113,13 +120,55 @@ func main() {
 	httpServer.DELETE("/admin/"+locoSwitchEndPoint+"/endpoint", handlers.RemoveEndpointFromFunction)
 
 	if helpers.GetEnv("LOCO_SWITCH_CRT", "") != "" {
+
 		httpServer.RunTLS(
 			":"+helpers.GetEnv("LOCO_SWITCH_HTTPS_PORT", "4443"),
 			helpers.GetEnv("LOCO_SWITCH_CRT", "certs/loco-switch.local.crt"),
 			helpers.GetEnv("LOCO_SWITCH_KEY", "certs/loco-switch.local.key"),
 		)
 	} else {
+
+		// Ngrok support: https://ngrok.com
+		// https://ngrok.com/blog-post/ngrok-go
+		if ngrok.WithAuthtokenFromEnv() != nil {
+			tun, err := ngrok.Listen(context.Background(),
+				config.HTTPEndpoint(),
+				ngrok.WithAuthtokenFromEnv(),
+			)
+			if err != nil {
+				log.Println("❌ Error while creating tunnel:", err)
+			}
+
+			log.Println("👋 Ngrok tunnel created:", tun.URL())
+
+			ex, err := os.Executable()
+			if err != nil {
+				log.Fatal("❌ Error after creating tunnel:", err)
+			}
+			exPath := filepath.Dir(ex)
+
+			f, err := os.Create(exPath + "/ngrok.url")
+
+			if err != nil {
+				log.Fatal("❌ Error when creating ngrok.url:", err)
+
+			}
+
+			defer f.Close()
+
+			_, errWrite := f.WriteString(tun.URL())
+
+			if errWrite != nil {
+				log.Fatal("❌ Error when writing ngrok.url:", errWrite)
+			}
+
+			log.Println("🤚 Ngrok URL:", exPath+"/ngrok.url")
+
+			httpServer.RunListener(tun)
+		}
+
 		httpServer.Run(":" + helpers.GetEnv("LOCO_SWITCH_HTTP_PORT", "8080"))
+
 	}
 
 }

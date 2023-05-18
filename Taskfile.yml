@@ -1,0 +1,425 @@
+version: '3'
+
+tasks:
+
+  # install capsule-http
+  install-capsule-http:
+    env:
+      VERSION: "v0.3.6" 
+      OS: "linux" 
+      ARCH: "arm64"
+    cmds:
+      - |
+        echo "📦 Installing capsule-http..."
+        wget -O ./services/capsule-http https://github.com/bots-garden/capsule/releases/download/${VERSION}/capsule-http-${VERSION}-${OS}-${ARCH}
+        chmod +x ./services/capsule-http
+
+  build-index-html:    
+    cmds:
+      - |
+        echo "📦 Building index-html.wasm module..."
+        cd services/functions/index-html
+        tinygo build -o index-html.wasm \
+          -scheduler=none \
+          --no-debug \
+          -target wasi ./main.go 
+        ls -lh *.wasm
+  
+  test-index-html:
+    env:
+      MESSAGE: 'Revision: Default 🐯'
+      HTTP_PORT: '7777'
+      DOMAIN: 'localhost'
+      PROTOCOL: 'http'
+      WASM_FILE: './functions/index-html/index-html.wasm'
+    cmds:
+      - | 
+        echo "🚀 Testing index-html..."
+        cd services
+        ./capsule-http --wasm=${WASM_FILE} --httpPort=${HTTP_PORT} &
+        sleep 1
+      - | 
+        curl -v ${PROTOCOL}://${DOMAIN}:${HTTP_PORT} 
+      - killport ${HTTP_PORT}
+
+  start-hello:
+    env:
+      MESSAGE: 'Hello - Revision: Default | 🐯'
+      HTTP_PORT: '8888'
+      DOMAIN: 'localhost'
+      PROTOCOL: 'http'
+      WASM_FILE: './functions/index-html/index-html.wasm'
+    cmds:
+      - | 
+        cd services
+        ./capsule-http --wasm=${WASM_FILE} --httpPort=${HTTP_PORT} &
+        sleep 1
+
+  start-hey:
+    env:
+      MESSAGE: 'Hey - Revision: Default | 👋'
+      HTTP_PORT: '6666'
+      DOMAIN: 'localhost'
+      PROTOCOL: 'http'
+      WASM_FILE: './functions/index-html/index-html.wasm'
+    cmds:
+      - | 
+        cd services
+        ./capsule-http --wasm=${WASM_FILE} --httpPort=${HTTP_PORT} &
+        sleep 1
+
+  start-hey-purple:
+    env:
+      MESSAGE: 'Hey - Revision: Purple | 🟣'
+      HTTP_PORT: '5555'
+      DOMAIN: 'localhost'
+      PROTOCOL: 'http'
+      WASM_FILE: './functions/index-html/index-html.wasm'
+    cmds:
+      - | 
+        cd services
+        ./capsule-http --wasm=${WASM_FILE} --httpPort=${HTTP_PORT} &
+        sleep 1
+
+  start-hey-orange:
+    env:
+      MESSAGE: 'Hey - Revision: Orange | 🟠'
+      HTTP_PORT: '4444'
+      DOMAIN: 'localhost'
+      PROTOCOL: 'http'
+      WASM_FILE: './functions/index-html/index-html.wasm'
+    cmds:
+      - | 
+        cd services
+        ./capsule-http --wasm=${WASM_FILE} --httpPort=${HTTP_PORT} &
+        sleep 1
+
+  start-hey-scale-1:
+    env:
+      MESSAGE: 'Hey - Revision: Scale | 1️⃣'
+      HTTP_PORT: '1111'
+      DOMAIN: 'localhost'
+      PROTOCOL: 'http'
+      WASM_FILE: './functions/index-html/index-html.wasm'
+    cmds:
+      - | 
+        cd services
+        ./capsule-http --wasm=${WASM_FILE} --httpPort=${HTTP_PORT} &
+        sleep 1
+
+  start-hey-scale-2:
+    env:
+      MESSAGE: 'Hey - Revision: Scale | 2️⃣'
+      HTTP_PORT: '2222'
+      DOMAIN: 'localhost'
+      PROTOCOL: 'http'
+      WASM_FILE: './functions/index-html/index-html.wasm'
+    cmds:
+      - | 
+        cd services
+        ./capsule-http --wasm=${WASM_FILE} --httpPort=${HTTP_PORT} &
+        sleep 1
+
+  start-hey-scale-3:
+    env:
+      MESSAGE: 'Hey - Revision: Scale | 3️⃣'
+      HTTP_PORT: '3333'
+      DOMAIN: 'localhost'
+      PROTOCOL: 'http'
+      WASM_FILE: './functions/index-html/index-html.wasm'
+    cmds:
+      - | 
+        cd services
+        ./capsule-http --wasm=${WASM_FILE} --httpPort=${HTTP_PORT} &
+        sleep 1
+
+
+  build-loco-switch:
+    cmds:
+      - |
+        go build
+        ls -lh loco-switch
+
+  start-loco-switch:
+    env:
+      LOCO_SWITCH_HTTP_PORT: 8080
+      LOCO_SWITCH_STORAGE: "functions.json"
+    cmds:
+      - |
+        ./loco-switch &
+        sleep 1
+
+  start-ngrok-loco-switch:
+    env:
+      LOCO_SWITCH_HTTP_PORT: 8080
+      LOCO_SWITCH_STORAGE: "functions.json"
+    cmds:
+      - |
+        NGROK_AUTHTOKEN="${NGROK_AUTHTOKEN}" ./loco-switch
+        #sleep 1
+
+
+  register-hello:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        LOCO_SWITCH_URL="$(cat ngrok.url)"
+        echo "🌍 ${LOCO_SWITCH_URL}"
+        curl -X POST ${LOCO_SWITCH_URL}/admin/functions/registration \
+        -H 'Content-Type: application/json; charset=utf-8' \
+        -d @- << EOF
+        {
+            "name":"hello",
+            "revision":"default",
+            "httpPort":8888,
+            "status":0,
+            "https":false,
+            "domain":"localhost"
+        }
+        EOF
+
+  call-hello:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        #LOCO_SWITCH_URL="$(cat ngrok.url)"
+        #echo "🌍 ${LOCO_SWITCH_URL}"
+        curl -X POST ${LOCO_SWITCH_URL}/functions/hello
+
+
+  register-hey:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        LOCO_SWITCH_URL="$(cat ngrok.url)"
+        echo "🌍 ${LOCO_SWITCH_URL}"
+        curl -X POST ${LOCO_SWITCH_URL}/admin/functions/registration \
+        -H 'Content-Type: application/json; charset=utf-8' \
+        -d @- << EOF
+        {
+            "name":"hey",
+            "revision":"default",
+            "httpPort":6666,
+            "status":0,
+            "https":false,
+            "domain":"localhost"
+        }
+        EOF
+        
+  call-hey:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        #LOCO_SWITCH_URL="$(cat ngrok.url)"
+        #echo "🌍 ${LOCO_SWITCH_URL}"
+        curl -X POST ${LOCO_SWITCH_URL}/functions/hey
+  
+  # New revision
+  register-hey-purple:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        curl -X POST ${LOCO_SWITCH_URL}/admin/functions/registration \
+        -H 'Content-Type: application/json; charset=utf-8' \
+        -d @- << EOF
+        {
+            "name":"hey",
+            "revision":"purple",
+            "httpPort":5555,
+            "status":0,
+            "https":false,
+            "domain":"localhost"
+        }
+        EOF
+        
+  call-hey-purple:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        curl -X POST ${LOCO_SWITCH_URL}/functions/hey/purple
+
+  # New revision
+  register-hey-orange:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        curl -X POST ${LOCO_SWITCH_URL}/admin/functions/registration \
+        -H 'Content-Type: application/json; charset=utf-8' \
+        -d @- << EOF
+        {
+            "name":"hey",
+            "revision":"orange",
+            "httpPort":4444,
+            "status":0,
+            "https":false,
+            "domain":"localhost"
+        }
+        EOF
+        
+  call-hey-orange:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        curl -X POST ${LOCO_SWITCH_URL}/functions/hey/orange
+
+# Register a new revision and add 2 endpoints to the revision
+  register-hey-scale-1:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        curl -X POST ${LOCO_SWITCH_URL}/admin/functions/registration \
+        -H 'Content-Type: application/json; charset=utf-8' \
+        -d @- << EOF
+        {
+            "name":"hey",
+            "revision":"scale",
+            "httpPort":1111,
+            "status":0,
+            "https":false,
+            "domain":"localhost"
+        }
+        EOF
+
+  # Add endpoint
+  add-hey-scale-2:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        curl -X POST ${LOCO_SWITCH_URL}/admin/functions/endpoint \
+        -H 'Content-Type: application/json; charset=utf-8' \
+        -d @- << EOF
+        {
+            "name":"hey",
+            "revision":"scale",
+            "httpPort":2222,
+            "status":0,
+            "https":false,
+            "domain":"localhost"
+        }
+        EOF
+
+  # Add endpoint
+  add-hey-scale-3:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        curl -X POST ${LOCO_SWITCH_URL}/admin/functions/endpoint \
+        -H 'Content-Type: application/json; charset=utf-8' \
+        -d @- << EOF
+        {
+            "name":"hey",
+            "revision":"scale",
+            "httpPort":3333,
+            "status":0,
+            "https":false,
+            "domain":"localhost"
+        }
+        EOF
+
+  call-hey-scale:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        curl -X POST ${LOCO_SWITCH_URL}/functions/hey/scale
+
+  kill-all:
+    cmds:
+      - killport 8888
+      - killport 6666
+      - killport 5555
+      - killport 4444
+      - killport 3333
+      - killport 2222
+      - killport 1111
+      - killport 8080
+
+  get-all-functions:
+    cmds:
+      - curl http://localhost:8080/admin/functions/list ; echo ""
+
+
+  #curl http://localhost:8080/functions/hey
+  #curl http://localhost:8080/functions/hey/purple
+  #curl http://localhost:8080/functions/hey/orange
+
+  register-hey-purple-as-default:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        curl -X POST ${LOCO_SWITCH_URL}/admin/functions/registration \
+        -H 'Content-Type: application/json; charset=utf-8' \
+        -d @- << EOF
+        {
+            "name":"hey",
+            "revision":"default",
+            "httpPort":5555,
+            "status":0,
+            "https":false,
+            "domain":"localhost"
+        }
+        EOF
+
+  register-hey-orange-as-default:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        curl -X POST ${LOCO_SWITCH_URL}/admin/functions/registration \
+        -H 'Content-Type: application/json; charset=utf-8' \
+        -d @- << EOF
+        {
+            "name":"hey",
+            "revision":"default",
+            "httpPort":4444,
+            "status":0,
+            "https":false,
+            "domain":"localhost"
+        }
+        EOF
+  
+  register-hey-scale-as-default:
+    env:
+      LOCO_SWITCH_URL: "http://localhost:8080"
+    cmds:
+      - |
+        curl -X POST ${LOCO_SWITCH_URL}/admin/functions/registration \
+        -H 'Content-Type: application/json; charset=utf-8' \
+        -d @- << EOF
+        {
+            "name":"hey",
+            "revision":"scale",
+            "httpPort":1111,
+            "status":0,
+            "https":false,
+            "domain":"localhost"
+        }
+        EOF
+    # ! it will unregister the other endpoints
+    # TODO: the create the revision promotion
+
+  # register again: task register-hey
+
+  unregister-hello:
+    cmds:
+      - |
+        curl -X DELETE http://localhost:8080/admin/functions/registration \
+        -H 'Content-Type: application/json; charset=utf-8' \
+        -d @- << EOF
+        {
+            "name":"hello",
+            "revision":"default"
+        }
+        EOF
